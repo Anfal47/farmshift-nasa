@@ -1,6 +1,7 @@
 import calendar
 from datetime import date, timedelta
 import math
+import re
 import requests
 import pandas as pd
 import plotly.graph_objects as go
@@ -92,7 +93,13 @@ h1,h2,h3 {color:#173D2E!important;letter-spacing:-.025em}
 .hint {color:#6D7B6F;font-size:.88rem}.eyebrow {font-size:.72rem;letter-spacing:2px;font-weight:750;color:#58745F}
 .panel {background:white;border:1px solid #E1E8DE;border-radius:18px;padding:20px 24px;margin:12px 0}
 .flowchip {background:#E8EFE4;color:#28513B;border-radius:9px;padding:10px 12px;text-align:center;font-weight:700}
-[data-testid="stNumberInput"] input {direction:ltr!important;font-variant-numeric:lining-nums}
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label, div[data-testid="stMarkdownContainer"] label {color:#203E2D!important;font-weight:650!important;opacity:1!important}
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {color:white!important}
+[data-testid="stForm"] {background:#FFFFFF;border:1px solid #DEE7DC;border-radius:16px;padding:18px}
+[data-testid="stSlider"] p, [data-testid="stCheckbox"] p {color:#203E2D!important}
+[data-testid="stTextInput"] input {direction:ltr!important;text-align:left!important;unicode-bidi:plaintext!important;font-family:Arial,sans-serif!important}
+[data-testid="stNumberInput"] input {direction:ltr!important;text-align:left!important;font-family:Arial,sans-serif!important}
+[data-testid="stAlert"] p {color:inherit!important}
 </style>""",unsafe_allow_html=True)
 
 with st.sidebar:
@@ -101,25 +108,25 @@ with st.sidebar:
     st.markdown('---')
     st.markdown('**NASA Space Apps Challenge**')
     st.caption('Tabuk pilot · adaptable to other locations')
-    st.markdown('**1 · Farm Setup**')
-    st.markdown('**2 · Farm Analysis**')
+    page=st.radio('Navigation',['1 · Farm Setup','2 · Farm Analysis'],key='navigation',label_visibility='collapsed')
     st.markdown('---')
     st.caption('Historical NASA POWER climate observations. Crop scoring is an illustrative prototype, not validated farming advice.')
 st.markdown('''<div class="hero"><div class="eyebrow">NASA SPACE APPS CHALLENGE · TABUK PILOT</div><h1>FarmShift <span style="font-weight:400;color:#68856A">/ Smarter rotations.</span></h1><p>Plan healthier crop rotations with real NASA climate data and your farm information.</p></div>''',unsafe_allow_html=True)
-setup, analysis=st.tabs(['01  ·  Farm Setup','02  ·  Farm Analysis'])
+st.caption('01 · Farm Setup     /     02 · Farm Analysis')
 if 'coords' not in st.session_state:
     st.session_state.coords=(28.445477,36.649388)
 if 'analyzed' not in st.session_state:
     st.session_state.analyzed=False
-with setup:
+if page=='1 · Farm Setup':
     st.markdown('<div class="section">📍 Farm location</div>',unsafe_allow_html=True)
     st.caption('Click the map to select a farm location, or enter latitude and longitude manually. The map selection updates the coordinate fields.')
     mc,lc=st.columns([1.35,1],gap='large')
     with mc:
         center=st.session_state.coords
-        m=folium.Map(location=list(center),zoom_start=11,tiles='CartoDB positron')
+        m=folium.Map(location=list(center),zoom_start=11,tiles='OpenStreetMap')
         folium.Marker(list(center),tooltip='Selected farm location',icon=folium.Icon(color='green')).add_to(m)
-        clicked=st_folium(m,height=310,returned_objects=['last_clicked'],key='farm_map')
+        st.caption('Map tiles require an internet connection. You can always enter coordinates manually.')
+        clicked=st_folium(m,height=310,width=None,returned_objects=['last_clicked'],key='farm_map')
         if clicked and clicked.get('last_clicked'):
             loc=clicked['last_clicked']; selected=(round(loc['lat'],6),round(loc['lng'],6))
             if selected!=st.session_state.coords:
@@ -127,10 +134,25 @@ with setup:
                 st.rerun()
     with lc:
         st.markdown('**Selected location**')
-        lat=st.number_input('Latitude (°)',-90.0,90.0,value=float(st.session_state.coords[0]),format='%.6f',key='lat_field')
-        lon=st.number_input('Longitude (°)',-180.0,180.0,value=float(st.session_state.coords[1]),format='%.6f',key='lon_field')
+        # Text fields keep ASCII digits independent of the browser's Arabic numeral locale.
+        if st.session_state.get('coord_display') != st.session_state.coords:
+            st.session_state.lat_ascii=f'{st.session_state.coords[0]:.6f}'
+            st.session_state.lon_ascii=f'{st.session_state.coords[1]:.6f}'
+            st.session_state.coord_display=st.session_state.coords
+        lat_text=st.text_input('Latitude (°)',key='lat_ascii',help='Use English digits, e.g. 28.445477')
+        lon_text=st.text_input('Longitude (°)',key='lon_ascii',help='Use English digits, e.g. 36.649388')
+        lat,lon=st.session_state.coords
         if st.button('Update map location',use_container_width=True):
-            st.session_state.coords=(lat,lon);st.rerun()
+            try:
+                if not re.fullmatch(r'[+-]?[0-9]+(?:\.[0-9]+)?',lat_text.strip()) or not re.fullmatch(r'[+-]?[0-9]+(?:\.[0-9]+)?',lon_text.strip()):
+                    raise ValueError('Enter coordinates using English digits (0–9) and a decimal point.')
+                lat,lon=float(lat_text),float(lon_text)
+                if not (-90<=lat<=90 and -180<=lon<=180):
+                    raise ValueError('Latitude must be -90 to 90; longitude -180 to 180.')
+                st.session_state.coords=(lat,lon)
+                st.rerun()
+            except ValueError as exc:
+                st.error(str(exc))
         st.caption('NASA POWER uses gridded climate observations; the selected point is not an on-farm weather station.')
     st.markdown('<div class="section">🌱 Farm and planting details</div>',unsafe_allow_html=True)
     with st.form('farm_inputs'):
@@ -156,10 +178,12 @@ with setup:
         if submit:
             st.session_state.params={'lat':lat,'lon':lon,'year':year,'previous':previous,'soil':soil,'ph':ph,'ec':ec,'water':water,'priority':priority,'first_start':MONTHS.index(start_name)+1,'duration':duration}
             st.session_state.analyzed=True
-            st.success('Farm details saved. Open the **Farm Analysis** tab to see your results.')
-with analysis:
+            st.success('Farm details saved. Select 2 · Farm Analysis in the left navigation to see your results.')
+            st.session_state.navigation='2 · Farm Analysis'
+            st.rerun()
+if page=='2 · Farm Analysis':
     if not st.session_state.analyzed:
-        st.info('Start in **Farm Setup**, enter your farm details and select **Analyze farm**. Your NASA-powered results will appear here.')
+        st.info('Start in 1 · Farm Setup, enter your farm details and select Analyze farm. Your NASA-powered results will appear here.')
     else:
         p=st.session_state.params
         lat,lon,year,previous,soil,ph,ec,water,priority,first_start,duration=[p[k] for k in ('lat','lon','year','previous','soil','ph','ec','water','priority','first_start','duration')]
