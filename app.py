@@ -38,6 +38,37 @@ h1,h2,h3,h4,h5,h6 {color:#173E2B!important}
 [data-baseweb="select"] span {color:#101C15!important}
 [data-testid="stMetricValue"] {color:#173E2B!important}
 [data-testid="stTextInput"] input {direction:ltr!important;text-align:left!important;font-variant-numeric:tabular-nums!important}
+
+/* FarmShift refreshed theme: calm dashboard, accessible labels and inputs */
+[data-testid="stSidebar"] {background:#123D32!important;border-right:1px solid #0C3128!important}
+[data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] p,[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+[data-testid="stSidebar"] .brand,[data-testid="stSidebar"] .brand-sub {color:#F2F8F2!important}
+[data-testid="stSidebar"] .brand-sub,[data-testid="stSidebar"] .footnote {color:#C6DDCE!important}
+[data-testid="stSidebar"] [data-baseweb="input"] input,
+[data-testid="stSidebar"] [data-baseweb="select"]>div,
+[data-testid="stSidebar"] [data-baseweb="base-input"] input,
+[data-testid="stSidebar"] [data-baseweb="select"] span {
+ background:#DCEEDB!important;color:#102C20!important;-webkit-text-fill-color:#102C20!important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] svg {fill:#173E2B!important;color:#173E2B!important}
+[data-baseweb="popover"] [role="listbox"], [data-baseweb="popover"] li,
+[data-baseweb="menu"], [role="option"] {background:#EFF7EC!important;color:#122F22!important;-webkit-text-fill-color:#122F22!important}
+[role="option"]:hover,[aria-selected="true"][role="option"] {background:#C6E3C4!important}
+[data-testid="stSidebar"] [data-testid="stExpander"] {background:#1C4B3E!important;border:1px solid #46735E!important}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary * {color:#F1F8F0!important}
+[data-testid="stSidebar"] [data-testid="stSlider"] [data-testid="stThumbValue"] {color:#F3FFF3!important}
+[data-testid="stSidebar"] [data-testid="stSlider"] [role="slider"] {background:#D8EAD6!important}
+[data-testid="stSidebar"] [data-testid="stSlider"] [data-testid="stTickBar"] {color:#F3FFF3!important}
+[data-testid="stSidebar"] .stButton>button[kind="primary"] {background:#DCEEDB!important;color:#123C2B!important;border-color:#DCEEDB!important}
+[data-testid="stSidebar"] .stButton>button[kind="primary"] p {color:#123C2B!important}
+[data-testid="stSidebar"] .stButton>button[kind="primary"]:hover {background:#C5E1C5!important}
+.stApp {background:#F8F8F3!important}
+.hero {background:#E9F1E6!important}
+/* Latin digit rendering in input controls and numerical widgets */
+input,[data-testid="stMetricValue"],[data-testid="stDataFrame"] {font-variant-numeric:lining-nums tabular-nums}
 </style>''',unsafe_allow_html=True)
 
 # Illustrative agronomic parameters, not validated recommendations for Tabuk.
@@ -86,23 +117,23 @@ def score_rotation(rotation,previous,soil,water_budget,climate,weights):
     total=sum(means[k]*weights[k] for k in weights)
     return total,means
 
-st.markdown('''<div class="hero"><div class="eyebrow">NASA Space Apps Challenge · Tabuk Pilot</div>
+st.markdown('''<div class="hero"><div class="eyebrow">NASA Space Apps Challenge · FarmShift</div>
 <div class="hero-title">Smarter rotations.<br>Stronger farms.</div>
 <div class="hero-sub">Explore crop rotation strategies using NASA climate observations, local soil conditions, and your farming priorities.</div></div>''',unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown('<div class="brand">◈ FarmShift</div><div class="brand-sub">Crop Rotation Planner</div>',unsafe_allow_html=True)
     st.subheader('Farm details')
-    st.caption('Tabuk, Saudi Arabia · pilot location')
-    if 'farm_lat' not in st.session_state: st.session_state.farm_lat='28.3838'
-    if 'farm_lon' not in st.session_state: st.session_state.farm_lon='36.5662'
+    st.caption('Demo farm location · change anytime')
+    if 'farm_lat' not in st.session_state: st.session_state.farm_lat='28.445477'
+    if 'farm_lon' not in st.session_state: st.session_state.farm_lon='36.649388'
     with st.expander('🗺️ Choose farm location on map (optional)'):
         st.caption('Click anywhere on the map to set the farm coordinates. Manual entry works without the map.')
         try:
             map_lat=float(st.session_state.farm_lat)
             map_lon=float(st.session_state.farm_lon)
         except ValueError:
-            map_lat,map_lon=28.3838,36.5662
+            map_lat,map_lon=28.445477,36.649388
         fmap=folium.Map(location=[map_lat,map_lon],zoom_start=9,tiles='OpenStreetMap')
         folium.Marker([map_lat,map_lon],tooltip='Selected farm').add_to(fmap)
         map_result=st_folium(fmap,height=255,use_container_width=True,key='farm_map',returned_objects=['last_clicked'])
@@ -114,16 +145,16 @@ with st.sidebar:
                 st.session_state.farm_lat=chosen_lat
                 st.session_state.farm_lon=chosen_lon
                 st.rerun()
-    st.text_input('Latitude (English digits)',key='farm_lat',help='Example: 28.3838')
-    st.text_input('Longitude (English digits)',key='farm_lon',help='Example: 36.5662')
+    st.text_input('Latitude (English digits)',key='farm_lat',help='Example: 28.445477')
+    st.text_input('Longitude (English digits)',key='farm_lon',help='Example: 36.649388')
     try:
         lat=float(st.session_state.farm_lat.translate(str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹','01234567890123456789')))
         lon=float(st.session_state.farm_lon.translate(str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹','01234567890123456789')))
         valid_coordinates=(-90<=lat<=90 and -180<=lon<=180)
     except ValueError:
-        lat,lon,valid_coordinates=28.3838,36.5662,False
+        lat,lon,valid_coordinates=28.445477,36.649388,False
     if not valid_coordinates: st.error('Enter valid latitude (-90 to 90) and longitude (-180 to 180).')
-    year=st.selectbox('Historical climate year',list(range(2025,2019,-1)))
+    year=st.select_slider('Historical climate year',options=list(range(2020,2026)),value=2025,help='Slide to choose a historical year (2020–2025).')
     previous=st.selectbox('Previous crop',list(CROPS))
     soil=st.selectbox('Soil type',['Loamy','Sandy','Clay','Unknown'])
     water_budget=st.slider('Available irrigation per season (mm)',0,700,300,25)
@@ -152,7 +183,7 @@ if 'nasa_result' not in st.session_state:
     st.subheader('Your farm, a clearer next step')
     st.markdown('<div class="section-note">Set your farm details on the left, then select <b>Analyze farm</b> to load real NASA climate observations.</div>',unsafe_allow_html=True)
     x,y,z=st.columns(3)
-    x.metric('01 · Location','Tabuk pilot')
+    x.metric('01 · Location','Demo farm')
     y.metric('02 · Climate','NASA POWER')
     z.metric('03 · Planning','3 rotations')
     st.markdown('---')
